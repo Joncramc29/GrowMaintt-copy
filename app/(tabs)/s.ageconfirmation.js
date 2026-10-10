@@ -1,6 +1,10 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { doc, serverTimestamp, setDoc } from "firebase/firestore";
+import { useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -9,9 +13,12 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import { auth, db } from "../../firebaseConfig";
 
 export default function AgeConfirmation() {
   const { width } = useWindowDimensions();
+
+  const [loading, setLoading] = useState(false);
 
   const isSmallScreen = width < 360;
   const isMediumScreen = width >= 360 && width < 600;
@@ -21,20 +28,71 @@ export default function AgeConfirmation() {
   const scale = isSmallScreen
     ? 0.85
     : isMediumScreen
-    ? 1
-    : isTablet
-    ? 1.15
-    : 1.25;
+      ? 1
+      : isTablet
+        ? 1.15
+        : 1.25;
 
   const horizontalPadding = isSmallScreen
     ? 18
     : isMediumScreen
-    ? 25
-    : isTablet
-    ? 45
-    : 60;
+      ? 25
+      : isTablet
+        ? 45
+        : 60;
 
   const s = (value) => Math.round(value * scale);
+
+  const handleAgeConfirmation = async () => {
+    const user = auth.currentUser;
+
+    if (!user) {
+      Alert.alert(
+        "Session required",
+        "Please log in or register to continue."
+      );
+      router.replace("/login");
+      return;
+    }
+
+    if (loading) return;
+
+    try {
+      setLoading(true);
+
+      const userRef = doc(db, "Users", user.uid);
+
+      await setDoc(
+        userRef,
+        {
+          ageConfirmed: true,
+          ageConfirmedAt: serverTimestamp(),
+          registrationStep: "identityverification",
+          accountCompleted: false,
+        },
+        { merge: true }
+      );
+
+      router.replace("/identityverification");
+    } catch (error) {
+      console.error("Error saving age confirmation:", error);
+
+      Alert.alert(
+        "Error",
+        "Could not save your age confirmation. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUnder18 = () => {
+    Alert.alert(
+      "Age requirement",
+      "You must be 18 or older to continue using this application."
+    );
+    router.replace("/");
+  };
 
   return (
     <View style={styles.screen}>
@@ -66,6 +124,7 @@ export default function AgeConfirmation() {
           ]}
           onPress={() => router.push("/terms")}
           activeOpacity={0.7}
+          disabled={loading}
         >
           <MaterialCommunityIcons
             name="arrow-left"
@@ -154,21 +213,27 @@ export default function AgeConfirmation() {
                     width: s(240),
                     height: s(53),
                     borderRadius: s(22),
+                    opacity: loading ? 0.7 : 1,
                   },
                 ]}
-                onPress={() => router.push("/identityverification")}
+                onPress={handleAgeConfirmation}
                 activeOpacity={0.8}
+                disabled={loading}
               >
-                <Text
-                  style={[
-                    styles.buttonText,
-                    {
-                      fontSize: s(14),
-                    },
-                  ]}
-                >
-                  I Am 18 Or Older
-                </Text>
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text
+                    style={[
+                      styles.buttonText,
+                      {
+                        fontSize: s(14),
+                      },
+                    ]}
+                  >
+                    I Am 18 Or Older
+                  </Text>
+                )}
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -182,8 +247,9 @@ export default function AgeConfirmation() {
                     marginTop: s(14),
                   },
                 ]}
-                onPress={() => router.push("/login")}
+                onPress={handleUnder18}
                 activeOpacity={0.8}
+                disabled={loading}
               >
                 <Text
                   style={[

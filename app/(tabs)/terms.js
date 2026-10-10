@@ -2,6 +2,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
+  Alert,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -12,7 +13,9 @@ import {
   View,
 } from "react-native";
 
+import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { useAppSettings } from "../../context/Appsettings";
+import { auth, db } from "../../firebaseConfig";
 
 const COLORS = {
   blue: "#071426",
@@ -26,6 +29,7 @@ export default function TermsScreen() {
   const { t, colors } = useAppSettings();
 
   const [accepted, setAccepted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const isSmallScreen = width < 360;
   const isMediumScreen = width >= 360 && width < 600;
@@ -51,6 +55,53 @@ export default function TermsScreen() {
 
   const buttonHeight = Math.round(50 * scale);
   const buttonRadius = buttonHeight / 2;
+
+  const handleAccept = async () => {
+    if (!accepted) {
+      Alert.alert(
+        "Terms and Conditions",
+        "Please accept the terms and conditions to continue."
+      );
+      return;
+    }
+
+    const user = auth.currentUser;
+
+    if (!user) {
+      Alert.alert(
+        "Session required",
+        "Please log in or register to continue."
+      );
+      router.replace("/login");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      await setDoc(
+        doc(db, "Users", user.uid),
+        {
+          termsAccepted: true,
+          termsAcceptedAt: serverTimestamp(),
+          registrationStep: "ageconfirmation",
+          accountCompleted: false,
+        },
+        { merge: true }
+      );
+
+      router.push("/s.ageconfirmation");
+    } catch (error) {
+      console.error("Error saving terms acceptance:", error);
+
+      Alert.alert(
+        "Error",
+        "Could not save your acceptance. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView
@@ -124,18 +175,10 @@ export default function TermsScreen() {
             {
               backgroundColor: colors.background,
               borderTopLeftRadius: s(
-                isTablet
-                  ? 55
-                  : isSmallScreen
-                  ? 35
-                  : 45
+                isTablet ? 55 : isSmallScreen ? 35 : 45
               ),
               borderTopRightRadius: s(
-                isTablet
-                  ? 55
-                  : isSmallScreen
-                  ? 35
-                  : 45
+                isTablet ? 55 : isSmallScreen ? 35 : 45
               ),
             },
           ]}
@@ -299,6 +342,7 @@ export default function TermsScreen() {
                 style={styles.checkboxRow}
                 onPress={() => setAccepted(!accepted)}
                 activeOpacity={0.7}
+                disabled={loading}
               >
                 <View
                   style={[
@@ -343,13 +387,12 @@ export default function TermsScreen() {
                     height: buttonHeight,
                     borderRadius: buttonRadius,
                     backgroundColor: COLORS.cyan,
+                    opacity: loading ? 0.7 : 1,
                   },
                 ]}
-                onPress={() => {
-                  setAccepted(true);
-                  router.push("/s.ageconfirmation");
-                }}
+                onPress={handleAccept}
                 activeOpacity={0.8}
+                disabled={loading}
               >
                 <Text
                   style={[
@@ -360,7 +403,7 @@ export default function TermsScreen() {
                     },
                   ]}
                 >
-                  {t.accept}
+                  {loading ? "..." : t.accept}
                 </Text>
               </TouchableOpacity>
 
@@ -373,8 +416,9 @@ export default function TermsScreen() {
                     backgroundColor: COLORS.cyan,
                   },
                 ]}
-                onPress={() => router.replace("/index")}
+                onPress={() => router.replace("/")}
                 activeOpacity={0.8}
+                disabled={loading}
               >
                 <Text
                   style={[
@@ -385,7 +429,7 @@ export default function TermsScreen() {
                     },
                   ]}
                 >
-                  {t.reject}
+                  Decline
                 </Text>
               </TouchableOpacity>
             </View>

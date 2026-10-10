@@ -1,6 +1,9 @@
+
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
-
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, onSnapshot } from "firebase/firestore";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -11,18 +14,9 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-
 import { SafeAreaView } from "react-native-safe-area-context";
-
-import { doc, onSnapshot } from "firebase/firestore";
-
-import { onAuthStateChanged } from "firebase/auth";
-
-import { auth, db } from "../../firebaseConfig";
-
-import { useEffect, useState } from "react";
-
 import { useAppSettings } from "../../context/Appsettings";
+import { auth, db } from "../../firebaseConfig";
 
 export default function Profile() {
   const { colors, t } = useAppSettings();
@@ -30,6 +24,30 @@ export default function Profile() {
   const [username, setUsername] = useState("");
   const [photoURL, setPhotoURL] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const { width } = useWindowDimensions();
+
+  const isSmallScreen = width < 360;
+  const isMediumScreen = width >= 360 && width < 600;
+  const isTablet = width >= 600;
+
+  const scale = isSmallScreen
+    ? 0.85
+    : isMediumScreen
+    ? 1
+    : isTablet
+    ? 1.15
+    : 1.25;
+
+  const horizontalPadding = isSmallScreen
+    ? 18
+    : isMediumScreen
+    ? 25
+    : isTablet
+    ? 45
+    : 60;
+
+  const headerColor = colors.header || "#081023";
 
   useEffect(() => {
     let unsubscribeUser = null;
@@ -46,6 +64,8 @@ export default function Profile() {
         setLoading(false);
         return;
       }
+
+      setLoading(true);
 
       const userRef = doc(db, "Users", currentUser.uid);
 
@@ -120,51 +140,49 @@ export default function Profile() {
     router.replace("/home");
   };
 
-  const { width } = useWindowDimensions();
-
-  const isSmallScreen = width < 360;
-  const isMediumScreen = width >= 360 && width < 600;
-  const isTablet = width >= 600;
-
-  const scale = isSmallScreen
-    ? 0.85
-    : isMediumScreen
-    ? 1
-    : isTablet
-    ? 1.15
-    : 1.25;
-
-  const horizontalPadding = isSmallScreen
-    ? 18
-    : isMediumScreen
-    ? 25
-    : isTablet
-    ? 45
-    : 60;
-
   if (loading) {
     return (
       <SafeAreaView
         style={[
           styles.loadingContainer,
-          { backgroundColor: colors.primaryBackground },
+          { backgroundColor: headerColor },
         ]}
       >
-        <ActivityIndicator size="large" color={colors.primary} />
+        <ActivityIndicator
+          size="large"
+          color={colors.primary}
+        />
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.primaryBackground }]}
+      style={[
+        styles.container,
+        { backgroundColor: headerColor },
+      ]}
+      edges={["top", "left", "right"]}
     >
-      <View style={[styles.header, { backgroundColor: colors.header }]}>
+      {/* ENCABEZADO AZUL OSCURO */}
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: headerColor,
+          },
+        ]}
+      >
         <TouchableOpacity
           style={styles.backButton}
           onPress={goHome}
           activeOpacity={0.7}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10,
+          }}
         >
           <MaterialCommunityIcons
             name="arrow-left"
@@ -186,6 +204,7 @@ export default function Profile() {
           {t.profileTitle}
         </Text>
 
+        {/* CAMPANA SIN CAMBIOS */}
         <TouchableOpacity
           style={[
             styles.notificationButton,
@@ -206,12 +225,15 @@ export default function Profile() {
         </TouchableOpacity>
       </View>
 
+      {/* CONTENIDO CON ESQUINAS CURVAS */}
       <View
         style={[
           styles.content,
           {
             marginTop: isTablet ? 70 : 40,
             backgroundColor: colors.background,
+            borderTopLeftRadius: 35,
+            borderTopRightRadius: 35,
           },
         ]}
       >
@@ -229,7 +251,10 @@ export default function Profile() {
           ]}
         >
           {photoURL ? (
-            <Image source={{ uri: photoURL }} style={styles.logo} />
+            <Image
+              source={{ uri: photoURL }}
+              style={styles.logo}
+            />
           ) : (
             <View style={styles.placeholder}>
               <MaterialCommunityIcons
@@ -249,7 +274,7 @@ export default function Profile() {
             styles.scrollContent,
             {
               paddingHorizontal: horizontalPadding,
-              paddingBottom: 30,
+              paddingBottom: 110,
             },
           ]}
         >
@@ -273,7 +298,9 @@ export default function Profile() {
           <View
             style={[
               styles.optionsContainer,
-              { paddingHorizontal: horizontalPadding },
+              {
+                paddingHorizontal: horizontalPadding,
+              },
             ]}
           >
             {menuOptions.map((option, index) => (
@@ -282,9 +309,13 @@ export default function Profile() {
                 style={[
                   styles.opttion,
                   {
-                    minHeight: isTablet ? 98 * scale : 60 * scale,
+                    minHeight: isTablet
+                      ? 98 * scale
+                      : 60 * scale,
                     marginBottom: 18 * scale,
-                    marginRight: isTablet ? 380 * scale : 120 * scale,
+                    marginRight: isTablet
+                      ? 380 * scale
+                      : 120 * scale,
                   },
                 ]}
                 onPress={() => {
@@ -306,8 +337,12 @@ export default function Profile() {
                     styles.iconContainer,
                     {
                       backgroundColor: option.color,
-                      width: isTablet ? 70 * scale : 45 * scale,
-                      height: isTablet ? 70 * scale : 45 * scale,
+                      width: isTablet
+                        ? 70 * scale
+                        : 45 * scale,
+                      height: isTablet
+                        ? 70 * scale
+                        : 45 * scale,
                       borderRadius: 12 * scale,
                       marginRight: 16 * scale,
                     },
@@ -324,7 +359,9 @@ export default function Profile() {
                   style={[
                     styles.optionText,
                     {
-                      fontSize: isTablet ? 20 * scale : 16 * scale,
+                      fontSize: isTablet
+                        ? 20 * scale
+                        : 16 * scale,
                       lineHeight: 28 * scale,
                       color: colors.text,
                     },
@@ -338,11 +375,16 @@ export default function Profile() {
         </ScrollView>
       </View>
 
+      {/* BARRA DE NAVEGACIÓN INFERIOR */}
       <View
         style={[
           styles.bottomBar,
           {
-            height: isSmallScreen ? 60 : isTablet ? 65 * scale : 65,
+            height: isSmallScreen
+              ? 60
+              : isTablet
+              ? 65 * scale
+              : 65,
             borderTopLeftRadius: 78 * scale,
             backgroundColor: colors.nav,
           },
@@ -374,7 +416,7 @@ export default function Profile() {
 
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => router.push("/expensesManagement")}
+          onPress={() => router.push("/expensesmanagement")}
           activeOpacity={0.7}
         >
           <MaterialCommunityIcons
@@ -434,7 +476,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     flexDirection: "row",
     alignItems: "center",
-    marginTop: -10,
+    marginTop: 0,
   },
 
   backButton: {
@@ -487,11 +529,12 @@ const styles = StyleSheet.create({
 
   content: {
     flex: 1,
-    marginTop: 70,
+    marginTop: 40,
     borderTopLeftRadius: 35,
     borderTopRightRadius: 35,
     alignItems: "center",
     width: "100%",
+    overflow: "visible",
   },
 
   name: {

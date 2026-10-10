@@ -1,3 +1,4 @@
+
 import { router } from "expo-router";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
@@ -92,6 +93,12 @@ export default function SignupScreen() {
         username: username.trim(),
         email: email.trim(),
         uid: user.uid,
+
+        // Estado inicial del registro
+        accountCompleted: false,
+        termsAccepted: false,
+        identityVerified: false,
+        registrationStep: "terms",
       });
 
       Alert.alert("Registration successfully", "", [
@@ -127,9 +134,7 @@ export default function SignupScreen() {
       <KeyboardAvoidingView
         style={styles.keyboardContainer}
         behavior={
-          Platform.OS === "ios"
-            ? "padding"
-            : "height"
+          Platform.OS === "ios" ? "padding" : "height"
         }
       >
         <View style={styles.topContent}>
@@ -305,9 +310,7 @@ export default function SignupScreen() {
                 </Text>
 
                 <TouchableOpacity
-                  onPress={() =>
-                    router.push("/login")
-                  }
+                  onPress={() => router.push("/login")}
                 >
                   <Text style={styles.loginText}>
                     Sign In

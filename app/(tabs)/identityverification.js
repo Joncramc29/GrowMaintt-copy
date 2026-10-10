@@ -1,10 +1,16 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+} from "firebase/firestore";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   StatusBar,
   StyleSheet,
@@ -18,13 +24,11 @@ import { auth, db } from "../../firebaseConfig";
 
 export default function VerifyAge() {
   const { t } = useAppSettings();
-
   const { width } = useWindowDimensions();
 
   const isSmallScreen = width < 360;
   const isMediumScreen = width >= 360 && width < 600;
-  const isTablet = width >= 600;
-  const isLargeScreen = width >= 900;
+  const isTablet = width >= 600 && width < 900;
 
   const scale = isSmallScreen
     ? 0.85
@@ -47,34 +51,67 @@ export default function VerifyAge() {
   const [documentUri, setDocumentUri] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loadingPhoto, setLoadingPhoto] = useState(true);
-  const [refreshKey, setRefreshKey] = useState(Date.now());
 
   useEffect(() => {
-    loadSavedPhoto();
+    loadSavedStatus();
   }, []);
 
-  const loadSavedPhoto = async () => {
+  const loadSavedStatus = async () => {
     try {
       const user = auth.currentUser;
 
       if (!user) {
         setLoadingPhoto(false);
+        Alert.alert(
+          "Session required",
+          "Please log in or register to continue."
+        );
+        router.replace("/login");
         return;
       }
 
       const userRef = doc(db, "Users", user.uid);
       const userSnap = await getDoc(userRef);
 
-      if (userSnap.exists()) {
-        const data = userSnap.data();
-
-        if (data.identityDocumentUrl) {
-          setDocumentUri(data.identityDocumentUrl);
-          setRefreshKey(Date.now());
-        }
+      if (!userSnap.exists()) {
+        Alert.alert(
+          "Registration required",
+          "Please complete the registration process first."
+        );
+        router.replace("/register");
+        return;
       }
+
+      const data = userSnap.data();
+
+      if (data.accountCompleted === true) {
+        router.replace("/(tabs)/home");
+        return;
+      }
+
+      if (data.termsAccepted !== true) {
+        router.replace("/terms");
+        return;
+      }
+
+      if (data.ageConfirmed !== true) {
+        router.replace("/s.ageconfirmation");
+        return;
+      }
+
+      await setDoc(
+        userRef,
+        {
+          registrationStep: "identityverification",
+        },
+        { merge: true }
+      );
     } catch (error) {
-      console.log("Error cargando documento:", error);
+      console.log("Error comprobando la verificación:", error);
+      Alert.alert(
+        "Error",
+        "No se pudo comprobar el estado de la verificación. Inténtalo de nuevo."
+      );
     } finally {
       setLoadingPhoto(false);
     }
@@ -86,35 +123,52 @@ export default function VerifyAge() {
         await ImagePicker.requestCameraPermissionsAsync();
 
       if (!permission.granted) {
+        Alert.alert(
+          "Camera permission",
+          "You must allow camera access to take a photo."
+        );
         return;
       }
 
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: false,
         quality: 0.2,
-        base64: true,
+        base64: false,
       });
 
       if (!result.canceled && result.assets?.length > 0) {
         const asset = result.assets[0];
 
-        if (asset.base64) {
-          const newPhotoUrl =
-            `data:image/jpeg;base64,${asset.base64}`;
-
-          setDocumentUri(newPhotoUrl);
-          setRefreshKey(Date.now());
+        if (asset.uri) {
+          setDocumentUri(asset.uri);
         }
       }
     } catch (error) {
       console.log("Error tomando foto:", error);
+      Alert.alert(
+        "Camera error",
+        "The photo could not be taken. Please try again."
+      );
     }
   };
 
   const saveDocument = async () => {
     const user = auth.currentUser;
 
-    if (!user || !documentUri) {
+    if (!user) {
+      Alert.alert(
+        "Session required",
+        "Please sign in again to continue."
+      );
+      router.replace("/login");
+      return;
+    }
+
+    if (!documentUri) {
+      Alert.alert(
+        "Photo required",
+        "You must take a photo before continuing."
+      );
       return;
     }
 
@@ -122,25 +176,57 @@ export default function VerifyAge() {
       setLoading(true);
 
       const userRef = doc(db, "Users", user.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        Alert.alert(
+          "Registration required",
+          "Please complete the registration process first."
+        );
+        router.replace("/register");
+        return;
+      }
+
+      const data = userSnap.data();
+
+      if (
+        data.termsAccepted !== true ||
+        data.ageConfirmed !== true
+      ) {
+        Alert.alert(
+          "Registration incomplete",
+          "Please complete the previous steps before continuing."
+        );
+
+        if (data.termsAccepted !== true) {
+          router.replace("/terms");
+        } else {
+          router.replace("/s.ageconfirmation");
+        }
+
+        return;
+      }
 
       await setDoc(
         userRef,
         {
-          identityDocumentUrl: documentUri,
-          identityDocumentUpdatedAt: new Date(),
+          identityVerified: true,
+          identityVerificationMode: "demo",
+          identityVerifiedAt: serverTimestamp(),
+          accountCompleted: true,
+          registrationStep: "completed",
+          accountCompletedAt: serverTimestamp(),
         },
-        {
-          merge: true,
-        }
+        { merge: true }
       );
-
-      setRefreshKey(Date.now());
-
-      await loadSavedPhoto();
 
       router.replace("/(tabs)/home");
     } catch (error) {
-      console.log("Error guardando documento:", error);
+      console.log("Error guardando la verificación:", error);
+      Alert.alert(
+        "Error",
+        "The verification could not be saved. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -172,6 +258,7 @@ export default function VerifyAge() {
             },
           ]}
           onPress={() => router.push("/s.ageconfirmation")}
+          disabled={loading}
         >
           <MaterialCommunityIcons
             name="arrow-left"
@@ -183,9 +270,7 @@ export default function VerifyAge() {
         <Text
           style={[
             styles.headerTitle,
-            {
-              fontSize: s(19),
-            },
+            { fontSize: s(19) },
           ]}
         >
           {t.identityVerification}
@@ -208,9 +293,7 @@ export default function VerifyAge() {
         <Text
           style={[
             styles.title,
-            {
-              fontSize: s(22),
-            },
+            { fontSize: s(22) },
           ]}
         >
           {t.scanYourIdentityDocument}
@@ -233,9 +316,7 @@ export default function VerifyAge() {
           <View
             style={[
               styles.loadingContainer,
-              {
-                marginTop: s(90),
-              },
+              { marginTop: s(90) },
             ]}
           >
             <ActivityIndicator
@@ -255,6 +336,7 @@ export default function VerifyAge() {
               },
             ]}
             onPress={takePhoto}
+            disabled={loading}
           >
             <MaterialCommunityIcons
               name="camera"
@@ -277,7 +359,6 @@ export default function VerifyAge() {
         ) : (
           <>
             <Image
-              key={refreshKey}
               source={{ uri: documentUri }}
               style={[
                 styles.preview,
@@ -296,9 +377,7 @@ export default function VerifyAge() {
             <TouchableOpacity
               style={[
                 styles.retakeButton,
-                {
-                  marginTop: s(20),
-                },
+                { marginTop: s(20) },
               ]}
               onPress={takePhoto}
               disabled={loading}
@@ -306,9 +385,7 @@ export default function VerifyAge() {
               <Text
                 style={[
                   styles.retakeText,
-                  {
-                    fontSize: s(15),
-                  },
+                  { fontSize: s(15) },
                 ]}
               >
                 {t.retakePhoto}
@@ -323,6 +400,7 @@ export default function VerifyAge() {
                   width: s(240),
                   height: s(55),
                   borderRadius: s(22),
+                  opacity: loading ? 0.7 : 1,
                 },
               ]}
               onPress={saveDocument}
@@ -337,9 +415,7 @@ export default function VerifyAge() {
                 <Text
                   style={[
                     styles.continueText,
-                    {
-                      fontSize: s(16),
-                    },
+                    { fontSize: s(16) },
                   ]}
                 >
                   {t.continue}

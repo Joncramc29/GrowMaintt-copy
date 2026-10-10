@@ -46,23 +46,18 @@ export default function LoginScreen() {
 
   const createPasswordResetAlert = async (user) => {
     try {
-      const pendingReset =
-        await AsyncStorage.getItem(
-          "pendingPasswordReset"
-        );
+      const pendingReset = await AsyncStorage.getItem(
+        "pendingPasswordReset"
+      );
 
-      if (!pendingReset) {
-        return;
-      }
+      if (!pendingReset) return;
 
       let resetData;
 
       try {
         resetData = JSON.parse(pendingReset);
       } catch {
-        await AsyncStorage.removeItem(
-          "pendingPasswordReset"
-        );
+        await AsyncStorage.removeItem("pendingPasswordReset");
         return;
       }
 
@@ -72,29 +67,15 @@ export default function LoginScreen() {
       const currentEmail =
         user?.email?.trim?.().toLowerCase?.();
 
-      if (!savedEmail || !currentEmail) {
-        return;
-      }
+      if (!savedEmail || !currentEmail) return;
+      if (savedEmail !== currentEmail) return;
 
-      if (savedEmail !== currentEmail) {
-        return;
-      }
-
-      const requestedAt = Number(
-        resetData?.requestedAt || 0
-      );
-
+      const requestedAt = Number(resetData?.requestedAt || 0);
       const now = Date.now();
-
       const maxAge = 24 * 60 * 60 * 1000;
 
-      if (
-        requestedAt &&
-        now - requestedAt > maxAge
-      ) {
-        await AsyncStorage.removeItem(
-          "pendingPasswordReset"
-        );
+      if (requestedAt && now - requestedAt > maxAge) {
+        await AsyncStorage.removeItem("pendingPasswordReset");
         return;
       }
 
@@ -115,14 +96,9 @@ export default function LoginScreen() {
         createdAt: serverTimestamp(),
       });
 
-      await AsyncStorage.removeItem(
-        "pendingPasswordReset"
-      );
+      await AsyncStorage.removeItem("pendingPasswordReset");
     } catch (error) {
-      console.log(
-        "Error creating password reset alert:",
-        error
-      );
+      console.log("Error creating password reset alert:", error);
     }
   };
 
@@ -138,35 +114,31 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      const credential =
-        await signInWithEmailAndPassword(
-          auth,
-          email.trim(),
-          password
-        );
-
-      const user = credential.user;
-
-      const userRef = doc(
-        db,
-        "Users",
-        user.uid
+      const credential = await signInWithEmailAndPassword(
+        auth,
+        email.trim(),
+        password
       );
 
-      const userSnapshot =
-        await getDoc(userRef);
+      const user = credential.user;
+      const userRef = doc(db, "Users", user.uid);
+      const userSnapshot = await getDoc(userRef);
 
-      if (!userSnapshot.exists()) {
+      let userData = {};
+
+      if (userSnapshot.exists()) {
+        userData = userSnapshot.data();
+      } else {
         await setDoc(userRef, {
           points: 0,
           createdAt: serverTimestamp(),
         });
+
+        userData = { points: 0 };
       }
 
       const deviceId = await getDeviceId();
-
-      const { deviceName, location } =
-        await getRealDeviceInfo();
+      const { deviceName, location } = await getRealDeviceInfo();
 
       const devicesRef = collection(
         db,
@@ -183,8 +155,7 @@ export default function LoginScreen() {
         deviceId
       );
 
-      const deviceSnapshot =
-        await getDoc(deviceRef);
+      const deviceSnapshot = await getDoc(deviceRef);
 
       if (deviceSnapshot.exists()) {
         await setDoc(
@@ -195,9 +166,7 @@ export default function LoginScreen() {
             lastLoginAt: serverTimestamp(),
             lastActive: serverTimestamp(),
           },
-          {
-            merge: true,
-          }
+          { merge: true }
         );
 
         const alertsRef = collection(
@@ -222,11 +191,8 @@ export default function LoginScreen() {
           createdAt: serverTimestamp(),
         });
       } else {
-        const devicesSnapshot =
-          await getDocs(devicesRef);
-
-        const isFirstDevice =
-          devicesSnapshot.empty;
+        const devicesSnapshot = await getDocs(devicesRef);
+        const isFirstDevice = devicesSnapshot.empty;
 
         await setDoc(deviceRef, {
           deviceId,
@@ -242,12 +208,8 @@ export default function LoginScreen() {
         if (isFirstDevice) {
           await setDoc(
             userRef,
-            {
-              primaryDeviceId: deviceId,
-            },
-            {
-              merge: true,
-            }
+            { primaryDeviceId: deviceId },
+            { merge: true }
           );
         } else {
           const alertsRef = collection(
@@ -276,30 +238,40 @@ export default function LoginScreen() {
 
       await createPasswordResetAlert(user);
 
-      router.replace("/home");
+      // Requisitos obligatorios antes de entrar a Home.
+      if (userData.termsAccepted !== true) {
+        router.replace("/terms");
+        return;
+      }
+
+      if (userData.identityVerified !== true) {
+        router.replace("/identityverification");
+        return;
+      }
+
+      router.replace("/(tabs)/home");
     } catch (error) {
-      let message =
-        "Unable to sign in. Please try again.";
+      console.log("Error al iniciar sesión:", error);
+
+      let message = "Unable to sign in. Please try again.";
 
       switch (error.code) {
         case "auth/invalid-email":
-          message =
-            "The email address is not valid.";
+          message = "The email address is not valid.";
           break;
 
         case "auth/user-not-found":
         case "auth/wrong-password":
         case "auth/invalid-credential":
-          message =
-            "Incorrect email or password.";
+          message = "Incorrect email or password.";
           break;
 
         case "auth/too-many-requests":
-          message =
-            "Too many attempts. Please try again later.";
+          message = "Too many attempts. Please try again later.";
           break;
 
         case "permission-denied":
+        case "firestore/permission-denied":
           message =
             "You do not have permission to access this data.";
           break;
@@ -320,11 +292,7 @@ export default function LoginScreen() {
 
       <KeyboardAvoidingView
         style={styles.keyboardContainer}
-        behavior={
-          Platform.OS === "ios"
-            ? "padding"
-            : "height"
-        }
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <View style={styles.header}>
           <Image
@@ -332,9 +300,7 @@ export default function LoginScreen() {
             style={styles.logo}
           />
 
-          <Text style={styles.title}>
-            Sign In
-          </Text>
+          <Text style={styles.title}>Sign In</Text>
         </View>
 
         <View style={styles.whiteContainer}>
@@ -342,18 +308,13 @@ export default function LoginScreen() {
             style={styles.whiteScroll}
             contentContainerStyle={[
               styles.scrollContent,
-              {
-                paddingHorizontal:
-                  horizontalPadding,
-              },
+              { paddingHorizontal: horizontalPadding },
             ]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
             <View style={styles.card}>
-              <Text style={styles.label}>
-                Email or Username
-              </Text>
+              <Text style={styles.label}>Email or Username</Text>
 
               <TextInput
                 style={styles.input}
@@ -365,9 +326,7 @@ export default function LoginScreen() {
                 keyboardType="email-address"
               />
 
-              <Text style={styles.label}>
-                Password
-              </Text>
+              <Text style={styles.label}>Password</Text>
 
               <View style={styles.passwordBox}>
                 <TextInput
@@ -380,28 +339,18 @@ export default function LoginScreen() {
                 />
 
                 <TouchableOpacity
-                  onPress={() =>
-                    setShowPassword(
-                      !showPassword
-                    )
-                  }
+                  onPress={() => setShowPassword(!showPassword)}
                 >
                   <Text style={styles.show}>
-                    {showPassword
-                      ? "Hide"
-                      : "Show"}
+                    {showPassword ? "Hide" : "Show"}
                   </Text>
                 </TouchableOpacity>
               </View>
 
               <TouchableOpacity
-                onPress={() =>
-                  router.push("/forgotpassword")
-                }
+                onPress={() => router.push("/forgotpassword")}
               >
-                <Text style={styles.forgot}>
-                  Forgot Password?
-                </Text>
+                <Text style={styles.forgot}>Forgot Password?</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -415,11 +364,7 @@ export default function LoginScreen() {
                 {loading ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text
-                    style={styles.buttonText}
-                  >
-                    Sign In
-                  </Text>
+                  <Text style={styles.buttonText}>Sign In</Text>
                 )}
               </TouchableOpacity>
 
@@ -429,13 +374,9 @@ export default function LoginScreen() {
                 </Text>
 
                 <TouchableOpacity
-                  onPress={() =>
-                    router.push("/register")
-                  }
+                  onPress={() => router.push("/register")}
                 >
-                  <Text style={styles.signup}>
-                    Sign Up
-                  </Text>
+                  <Text style={styles.signup}>Sign Up</Text>
                 </TouchableOpacity>
               </View>
             </View>

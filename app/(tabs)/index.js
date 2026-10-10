@@ -1,13 +1,13 @@
 import { router } from "expo-router";
 import {
-    Image,
-    Pressable,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
-    useWindowDimensions,
+  Image,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
 } from "react-native";
 
 export default function Welcome() {

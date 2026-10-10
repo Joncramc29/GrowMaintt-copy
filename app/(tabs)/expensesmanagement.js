@@ -31,20 +31,20 @@ export default function ExpenseManagement() {
   const scale = isSmallScreen
     ? 0.85
     : isMediumScreen
-    ? 1
-    : isTablet
-    ? 1.15
-    : isLargeScreen
-    ? 1.25
-    : 1;
+      ? 1
+      : isTablet
+        ? 1.15
+        : isLargeScreen
+          ? 1.25
+          : 1;
 
   const horizontalPadding = isSmallScreen
     ? 16
     : isMediumScreen
-    ? 20
-    : isTablet
-    ? 35
-    : 45;
+      ? 20
+      : isTablet
+        ? 35
+        : 45;
 
   const s = (value) => Math.round(value * scale);
 
@@ -205,18 +205,13 @@ export default function ExpenseManagement() {
       );
 
       if (monthMatch) {
-        const month =
-          months[monthMatch[1].toLowerCase()];
+        const month = months[monthMatch[1].toLowerCase()];
 
         if (month !== undefined) {
           const year = Number(monthMatch[3]);
           const day = Number(monthMatch[2]);
 
-          const date = new Date(
-            year,
-            month,
-            day
-          );
+          const date = new Date(year, month, day);
 
           if (
             !isNaN(date.getTime()) &&
@@ -238,11 +233,7 @@ export default function ExpenseManagement() {
         const month = Number(isoMatch[2]) - 1;
         const day = Number(isoMatch[3]);
 
-        const date = new Date(
-          year,
-          month,
-          day
-        );
+        const date = new Date(year, month, day);
 
         if (
           !isNaN(date.getTime()) &&
@@ -255,7 +246,7 @@ export default function ExpenseManagement() {
       }
 
       const slashMatch = cleanValue.match(
-        /^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/
+        /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/
       );
 
       if (slashMatch) {
@@ -277,11 +268,7 @@ export default function ExpenseManagement() {
           month = second - 1;
         }
 
-        const date = new Date(
-          year,
-          month,
-          day
-        );
+        const date = new Date(year, month, day);
 
         if (
           !isNaN(date.getTime()) &&
@@ -343,8 +330,7 @@ export default function ExpenseManagement() {
   };
 
   const isInCurrentWeek = (expense) => {
-    const expenseDate =
-      getExpenseDate(expense);
+    const expenseDate = getExpenseDate(expense);
 
     if (!expenseDate) {
       return false;
@@ -358,42 +344,27 @@ export default function ExpenseManagement() {
       today.getDate()
     );
 
-    const startOfWeek = new Date(
-      currentDate
-    );
-
-    const currentDay =
-      startOfWeek.getDay();
+    const startOfWeek = new Date(currentDate);
+    const currentDay = startOfWeek.getDay();
 
     const difference =
-      currentDay === 0
-        ? 6
-        : currentDay - 1;
+      currentDay === 0 ? 6 : currentDay - 1;
 
     startOfWeek.setDate(
-      startOfWeek.getDate() -
-        difference
+      startOfWeek.getDate() - difference
     );
 
-    const endOfWeek = new Date(
-      startOfWeek
-    );
-
-    endOfWeek.setDate(
-      endOfWeek.getDate() + 7
-    );
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(endOfWeek.getDate() + 7);
 
     return (
-      expenseDate.getTime() >=
-        startOfWeek.getTime() &&
-      expenseDate.getTime() <
-        endOfWeek.getTime()
+      expenseDate.getTime() >= startOfWeek.getTime() &&
+      expenseDate.getTime() < endOfWeek.getTime()
     );
   };
 
   const isInCurrentMonth = (expense) => {
-    const expenseDate =
-      getExpenseDate(expense);
+    const expenseDate = getExpenseDate(expense);
 
     if (!expenseDate) {
       return false;
@@ -402,28 +373,20 @@ export default function ExpenseManagement() {
     const today = new Date();
 
     return (
-      expenseDate.getFullYear() ===
-        today.getFullYear() &&
-      expenseDate.getMonth() ===
-        today.getMonth()
+      expenseDate.getFullYear() === today.getFullYear() &&
+      expenseDate.getMonth() === today.getMonth()
     );
   };
 
-  const weeklyExpenses = expenses.filter(
-    (expense) =>
-      isInCurrentWeek(expense)
+  const weeklyExpenses = expenses.filter((expense) =>
+    isInCurrentWeek(expense)
   );
 
-  const monthlyExpenses = expenses.filter(
-    (expense) =>
-      isInCurrentMonth(expense)
+  const monthlyExpenses = expenses.filter((expense) =>
+    isInCurrentMonth(expense)
   );
 
-  const renderSection = (
-    title,
-    icon,
-    sectionExpenses
-  ) => (
+  const renderSection = (title, icon, sectionExpenses) => (
     <View style={styles.section}>
       <View style={styles.sectionTitleContainer}>
         <MaterialCommunityIcons
@@ -448,8 +411,7 @@ export default function ExpenseManagement() {
           style={[
             styles.line,
             {
-              backgroundColor:
-                colors.secondaryText,
+              backgroundColor: colors.secondaryText,
             },
           ]}
         />
@@ -491,8 +453,7 @@ export default function ExpenseManagement() {
       style={[
         styles.container,
         {
-          backgroundColor:
-            colors.primaryBackground,
+          backgroundColor: colors.primaryBackground,
         },
       ]}
     >
@@ -501,10 +462,8 @@ export default function ExpenseManagement() {
           styles.header,
           {
             height: 118 * scale,
-            paddingHorizontal:
-              horizontalPadding,
-            backgroundColor:
-              colors.primaryBackground,
+            paddingHorizontal: horizontalPadding,
+            backgroundColor: colors.primaryBackground,
           },
         ]}
       >
@@ -518,15 +477,13 @@ export default function ExpenseManagement() {
               left: 0,
               right: 0,
               textAlign: "center",
-              transform: [
-                { translateY: 1 * scale },
-              ],
+              transform: [{ translateY: 4 * scale }],
               color: colors.white,
             },
           ]}
-          numberOfLines={1}
+          numberOfLines={2}
         >
-          {t.expenseManagement}
+          {"Expense\nManagement"}
         </Text>
 
         <TouchableOpacity
@@ -535,14 +492,10 @@ export default function ExpenseManagement() {
             {
               zIndex: 10,
               elevation: 10,
-              transform: [
-                { translateY: 4 * scale },
-              ],
+              transform: [{ translateY: 4 * scale }],
             },
           ]}
-          onPress={() =>
-            router.replace("/home")
-          }
+          onPress={() => router.replace("/home")}
           activeOpacity={0.7}
           hitSlop={{
             top: 10,
@@ -573,8 +526,7 @@ export default function ExpenseManagement() {
             router.push({
               pathname: "/notifications",
               params: {
-                from:
-                  "/expensesmanagement",
+                from: "/expensesmanagement",
               },
             })
           }
@@ -592,22 +544,18 @@ export default function ExpenseManagement() {
         style={[
           styles.content,
           {
-            backgroundColor:
-              colors.background,
+            backgroundColor: colors.background,
           },
         ]}
         contentContainerStyle={{
-          paddingHorizontal:
-            horizontalPadding,
+          paddingHorizontal: horizontalPadding,
           paddingTop: s(20),
           paddingBottom: s(90),
         }}
         showsVerticalScrollIndicator={false}
       >
         {loading ? (
-          <View
-            style={styles.loadingContainer}
-          >
+          <View style={styles.loadingContainer}>
             <ActivityIndicator
               size="large"
               color={colors.icon}
@@ -617,8 +565,7 @@ export default function ExpenseManagement() {
               style={[
                 styles.loadingText,
                 {
-                  color:
-                    colors.secondaryText,
+                  color: colors.secondaryText,
                   fontSize: s(15),
                 },
               ]}
@@ -655,38 +602,24 @@ export default function ExpenseManagement() {
           {
             height:
               65 *
-              (isSmallScreen
-                ? 0.85
-                : isTablet
-                ? 1.15
-                : 1),
+              (isSmallScreen ? 0.85 : isTablet ? 1.15 : 1),
             borderTopLeftRadius:
               78 *
-              (isSmallScreen
-                ? 0.85
-                : isTablet
-                ? 1.15
-                : 1),
+              (isSmallScreen ? 0.85 : isTablet ? 1.15 : 1),
             backgroundColor: colors.nav,
           },
         ]}
       >
         <TouchableOpacity
           style={styles.navButton}
-          onPress={() =>
-            router.push("/home")
-          }
+          onPress={() => router.push("/home")}
           activeOpacity={0.8}
         >
           <MaterialCommunityIcons
             name="home-outline"
             size={
               35 *
-              (isSmallScreen
-                ? 0.85
-                : isTablet
-                ? 1.15
-                : 1)
+              (isSmallScreen ? 0.85 : isTablet ? 1.15 : 1)
             }
             color={colors.white}
           />
@@ -694,20 +627,14 @@ export default function ExpenseManagement() {
 
         <TouchableOpacity
           style={styles.navButton}
-          onPress={() =>
-            router.push("/historial")
-          }
+          onPress={() => router.push("/historial")}
           activeOpacity={0.8}
         >
           <MaterialCommunityIcons
             name="chart-box-outline"
             size={
               35 *
-              (isSmallScreen
-                ? 0.85
-                : isTablet
-                ? 1.15
-                : 1)
+              (isSmallScreen ? 0.85 : isTablet ? 1.15 : 1)
             }
             color={colors.white}
           />
@@ -715,22 +642,14 @@ export default function ExpenseManagement() {
 
         <TouchableOpacity
           style={styles.navButton}
-          onPress={() =>
-            router.push(
-              "/expensesmanagement"
-            )
-          }
+          onPress={() => router.push("/expensesmanagement")}
           activeOpacity={0.8}
         >
           <MaterialCommunityIcons
             name="swap-horizontal"
             size={
               37 *
-              (isSmallScreen
-                ? 0.85
-                : isTablet
-                ? 1.15
-                : 1)
+              (isSmallScreen ? 0.85 : isTablet ? 1.15 : 1)
             }
             color={colors.white}
           />
@@ -738,20 +657,14 @@ export default function ExpenseManagement() {
 
         <TouchableOpacity
           style={styles.navButton}
-          onPress={() =>
-            router.push("/currentgoal")
-          }
+          onPress={() => router.push("/currentgoal")}
           activeOpacity={0.8}
         >
           <MaterialCommunityIcons
             name="layers-outline"
             size={
               35 *
-              (isSmallScreen
-                ? 0.85
-                : isTablet
-                ? 1.15
-                : 1)
+              (isSmallScreen ? 0.85 : isTablet ? 1.15 : 1)
             }
             color={colors.white}
           />
@@ -759,20 +672,14 @@ export default function ExpenseManagement() {
 
         <TouchableOpacity
           style={styles.navButton}
-          onPress={() =>
-            router.push("/profile")
-          }
+          onPress={() => router.push("/profile")}
           activeOpacity={0.8}
         >
           <MaterialCommunityIcons
             name="account-outline"
             size={
               35 *
-              (isSmallScreen
-                ? 0.85
-                : isTablet
-                ? 1.15
-                : 1)
+              (isSmallScreen ? 0.85 : isTablet ? 1.15 : 1)
             }
             color={colors.white}
           />
@@ -793,16 +700,13 @@ function ExpenseItem({
   t,
   s,
 }) {
-  const isSelected =
-    selectedExpense === expense.id;
+  const isSelected = selectedExpense === expense.id;
 
   return (
     <View>
       <TouchableOpacity
         style={styles.expenseRow}
-        onPress={() =>
-          toggleExpense(expense.id)
-        }
+        onPress={() => toggleExpense(expense.id)}
         activeOpacity={0.7}
       >
         <View
@@ -812,8 +716,7 @@ function ExpenseItem({
               width: s(43),
               height: s(43),
               borderRadius: s(12),
-              backgroundColor:
-                colors.icon,
+              backgroundColor: colors.icon,
             },
           ]}
         >
@@ -835,8 +738,7 @@ function ExpenseItem({
             ]}
             numberOfLines={1}
           >
-            {expense.category ||
-              t.expenseType}
+            {expense.category || t.expenseType}
           </Text>
 
           <Text
@@ -887,15 +789,9 @@ function ExpenseDetails({
   t,
   s,
 }) {
-  const amount =
-    Number(expense.amount) || 0;
-
-  const roundedAmount =
-    Number(expense.roundedAmount) ||
-    amount;
-
-  const savings =
-    roundedAmount - amount;
+  const amount = Number(expense.amount) || 0;
+  const roundedAmount = Number(expense.roundedAmount) || amount;
+  const savings = roundedAmount - amount;
 
   return (
     <View
@@ -917,20 +813,14 @@ function ExpenseDetails({
 
       <DetailRow
         label={t.category}
-        value={
-          expense.category ||
-          t.notAvailable
-        }
+        value={expense.category || t.notAvailable}
         colors={colors}
         s={s}
       />
 
       <DetailRow
         label={t.date}
-        value={
-          formatDate(expense.date) ||
-          t.notAvailable
-        }
+        value={formatDate(expense.date) || t.notAvailable}
         colors={colors}
         s={s}
       />
@@ -951,20 +841,14 @@ function ExpenseDetails({
 
       <DetailRow
         label={t.expenseType}
-        value={
-          expense.expenseType ||
-          t.notAvailable
-        }
+        value={expense.expenseType || t.notAvailable}
         colors={colors}
         s={s}
       />
 
       <DetailRow
         label={t.frequency}
-        value={
-          expense.frequency ||
-          t.notAvailable
-        }
+        value={expense.frequency || t.notAvailable}
         colors={colors}
         s={s}
       />
@@ -972,12 +856,7 @@ function ExpenseDetails({
   );
 }
 
-function DetailRow({
-  label,
-  value,
-  colors,
-  s,
-}) {
+function DetailRow({ label, value, colors, s }) {
   return (
     <View style={styles.detailRow}>
       <Text
